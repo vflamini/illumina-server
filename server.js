@@ -12,6 +12,7 @@ const Papa = require("papaparse");
 const zlib = require('zlib');
 var bodyParser = require('body-parser');
 var spawn = require("child_process").spawn;
+var FileSaver = require("file-saver");
 
 const globalProgress = {};
 
@@ -69,7 +70,7 @@ app.post("/sendIllumina", async (req,res) => {
             //         })
             //     }
             // });
-            exec('mkdir -p ./tmp/clonal_lineage & mkdir -p ./tmp/stdout_dumps', (stdout,stderr,error) => {
+            exec('mkdir -p ./tmp/clonal_lineage & mkdir -p ./tmp/stdout_dumps & mkdir -p ./tmp/filtered & mkdir -p ./tmp/clonal_lineage/filtered & mkdir -p ./tmp/clonal_lineage/filtered/collapsed', (stdout,stderr,error) => {
                 if(error){
                     console.log('exec error: ' + error);
                 }else{
@@ -108,10 +109,14 @@ app.post("/sendIllumina", async (req,res) => {
                                 if(finished){
                                     progress = {};
                                     console.log("Collapsing seqs...");
-                                    spawn('CollapseSeq.py', ['-s', './tmp/clonal_lineage/filtered/' + file.name.slice(0,file.name.length-16) + '_assemble-pass.fastq', '--fasta', '-n','1', '--outname', 'collapsed/' + file.name.slice(0,file.name.length-16)]).stdout.on('data', data => {
+                                    spawn('CollapseSeq.py', ['-s', './tmp/clonal_lineage/filtered/' + file.name.slice(0,file.name.length-16) + '_quality-pass.fastq', '--fasta', '-n','1', '--outname', 'collapsed/' + file.name.slice(0,file.name.length-16)]).stdout.on('data', data => {
                                         if(data){
-                                            progress[file.name.slice(0,file.name.length-16)] = data.toString().match(/.{3}%/g)[0];
-                                            res.write('data:'+JSON.stringify(progress) + '\n\n');
+                                            regExpMatch = data.toString().match(/.{3}%/g);
+                                            if (regExpMatch){
+                                                console.log(progress);
+                                                progress[file.name.slice(0,file.name.length-16)] = data.toString().match(/.{3}%/g)[0];
+                                                res.write('data:'+JSON.stringify(progress) + '\n\n');
+                                            }  
                                         }
                                         finished = true;
                                         Object.keys(progress).map(key => {
@@ -125,11 +130,11 @@ app.post("/sendIllumina", async (req,res) => {
                                             var promise = null;
                                             if (JSZip.support.uint8array) {
                                                 promise = zip.generateAsync({type: "uint8array"}).then(blob => {
-                                                    saveAs(blob, "collapsed.zip");
+                                                    FileSaver.saveAs(blob, "collapsed.zip");
                                                 });
                                             }else{
                                                 promise = zip.generateAsynce({type: "string"}).then(blob => {
-                                                    saveAs(blob, "collapsed.zip");
+                                                    FileSaver.saveAs(blob, "collapsed.zip");
                                                 });
                                             }
                                             res.end();
