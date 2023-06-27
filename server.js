@@ -60,9 +60,9 @@ app.post("/sendIllumina", async (req,res) => {
     console.log("processing...");
     await fileArray.forEach(async (file,idx) => {
         // write received zip files to a file locally
-        if(file.name.slice(file.name.length-3,file.name.length)){
+        if(file.name.slice(file.name.length-3,file.name.length) == ".gz" || file.name.slice(file.name.length-6,file.name.length) == ".fastq"){
             console.log(file.name.slice(file.name.length-3,file.name.length));
-        }
+        
         fs.writeFileSync(path.join(__dirname,"tmp",file.name),file.data);
 
         // execute gunzip locally synchronously
@@ -160,6 +160,7 @@ app.post("/sendIllumina", async (req,res) => {
                 });
             }
         });
+    }
     });
 });
 
